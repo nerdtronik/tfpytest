@@ -1,7 +1,7 @@
 import pytest
 import json
 from unittest.mock import patch, MagicMock
-from terraform_python import Terraform, TerraformResult, TerraformError
+from terratesting import Terraform, TerraformResult, TerraformError
 
 
 @pytest.fixture
@@ -13,7 +13,7 @@ def mock_terraform():
 @patch("terraform_python.Terraform.init")
 def test_terraform_init(mock_terraform):
     """Test Terraform initialization with default values."""
-    assert mock_terraform.__workspace__ == "default"
+    assert mock_terraform.workspace == "default"
     assert mock_terraform.__lock__ is True
     assert mock_terraform.__lock_timeout__ == "0s"
     assert mock_terraform.__input__ is False

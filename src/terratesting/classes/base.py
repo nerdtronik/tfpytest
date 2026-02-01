@@ -5,10 +5,16 @@ from typing import Any, Callable, Dict, List, Optional
 
 
 class TerraformResult:
+    """Result object for Terraform commands
+    Attributes:
+        success (bool): Indicates if the command was successful
+        result (Any): The result data from the command
+    """
+    success: bool
+    result: Any
     def __init__(self, success: bool, result: Any):
         self.success = success
         self.result = result
-        self.__dict__ = {"success": success, "result": result}
 
     def __str__(self):
         return f"TerraformResult(success={self.success}, result_len={len(str(self.result))})"
@@ -16,23 +22,24 @@ class TerraformResult:
 
 class Terraform:
     """
-    A Python wrapper for Terraform CLI operations.
+    A Python wrapper for Terraform/OpenTofu CLI operations.
 
     This class provides methods for executing Terraform commands including
     init, plan, apply, show, and destroy. It handles argument formatting,
     command execution, and output parsing.
 
     Attributes:
-        __workspace__ (str): The Terraform workspace name
+        workspace (str): The Terraform workspace name
         chdir (str): The directory where Terraform commands will be executed
-        __lock__ (bool): Whether to use state locking
-        __lock_timeout__ (str): How long to wait for state lock
-        __input__ (bool): Whether to ask for input interactively
-        __paralellism__ (int): Number of parallel operations
-        __color__ (bool): Whether to use color in output
-        __var_file__ (str): Path to variable definition file
-        __version__ (dict): Terraform version information
-        __planfile__ (str): Default plan file name
+        lock (bool): Whether to use state locking
+        lock_timeout (str): How long to wait for state lock
+        interactive (bool): Whether to ask for input interactively
+        paralellism (int): Number of parallel operations
+        color (bool): Whether to use color in output
+        var_file (str): Path to variable definition file
+        plan_file (str): Default plan file name
+        version_dict (dict): Terraform version information
+        cmd_name (str): The base Terraform command (default: 'terraform')
 
     Example:
         ```python
@@ -49,15 +56,16 @@ class Terraform:
     """
 
     chdir: str
-    __version__: Dict
-    __lock__: bool
-    __lock_timeout__: str
-    __input__: bool
-    __workspace__: str
-    __paralellism__: int
-    __color__: bool
-    __var_file__: str
-    __planfile__: str
+    lock: bool
+    lock_timeout: str
+    interactive: bool
+    workspace: str
+    paralellism: int
+    color: bool
+    var_file: str
+    plan_file: str
+    version_dict: Dict
+    cmd_name: str
 
     def version(self, quiet: Optional[bool] = False) -> TerraformResult:
         """
@@ -87,7 +95,7 @@ class Terraform:
         """
         pass
 
-    def enable_lock(self, enable: bool = True):
+    def enablelock(self, enable: bool = True):
         """
         Set state locking option.
 
@@ -96,7 +104,7 @@ class Terraform:
         """
         pass
 
-    def enable_input(self, enable: bool = False):
+    def enableinput(self, enable: bool = False):
         """
         Set interactive input option.
 
@@ -105,7 +113,7 @@ class Terraform:
         """
         pass
 
-    def enable_lock_timeout(self, timeout: str = "0s"):
+    def enablelock_timeout(self, timeout: str = "0s"):
         """
         Set state lock timeout.
 
@@ -115,7 +123,7 @@ class Terraform:
         pass
 
     @staticmethod
-    def __build_arg__(arg: str, value) -> str:
+    def _build_arg(arg: str, value) -> str:
         """
         Build a formatted command-line argument string for Terraform.
 
@@ -128,7 +136,7 @@ class Terraform:
         """
         pass
 
-    def __default_args__(
+    def _default_args(
         self,
         color: Optional[bool] = None,
         lock: Optional[bool] = None,
@@ -149,7 +157,7 @@ class Terraform:
 
         pass
 
-    def __global_args__(self, chdir: str = None):
+    def _global_args(self, chdir: str = None):
         """Global terraform args formatter
 
         Args:
@@ -302,7 +310,7 @@ class Terraform:
         pass
 
     @staticmethod
-    def __parse_vars__(vars: Optional[Dict[str, Any]] = None) -> List[str]:
+    def _parse_vars(vars: Optional[Dict[str, Any]] = None) -> List[str]:
         """
         Parse variable dictionary into command-line arguments.
 
@@ -365,7 +373,7 @@ class Terraform:
         pass
 
     @staticmethod
-    def __apply_line_callback__(stdout: str = None, stderr: str = None):
+    def _apply_line_callback(stdout: str = None, stderr: str = None):
         """Per line callback for apply command output
 
         Args:
@@ -375,7 +383,7 @@ class Terraform:
         pass
 
     @staticmethod
-    def __apply_callback__(stdout: str = None, stderr: str = None):
+    def _apply_callback(stdout: str = None, stderr: str = None):
         """Output callback for terraform apply
 
         Args:
@@ -582,7 +590,7 @@ class Terraform:
     ):
         pass
 
-    def __legacy_refresh__(
+    def _legacy_refresh(
         self,
         target: Optional[str] = None,
         vars: Optional[dict] = None,
@@ -619,13 +627,13 @@ class Terraform:
     ):
         pass
 
-    def __legacy_taint__(
+    def _legacy_taint(
         self,
         address: str,
         backup: Optional[str] = None,
         state: Optional[str] = None,
         state_out: Optional[str] = None,
-        ignore_remote_version: Optional[bool] = None,
+        ignore_remoteversion: Optional[bool] = None,
         allow_missing: Optional[bool] = None,
         lock: Optional[bool] = None,
         lock_timeout: Optional[str] = None,
@@ -639,7 +647,7 @@ class Terraform:
         backup: Optional[str] = None,
         state: Optional[str] = None,
         state_out: Optional[str] = None,
-        ignore_remote_version: Optional[bool] = None,
+        ignore_remoteversion: Optional[bool] = None,
         allow_missing: Optional[bool] = None,
         lock: Optional[bool] = None,
         lock_timeout: Optional[str] = None,
@@ -655,7 +663,7 @@ class Terraform:
         backup: Optional[str] = None,
         state: Optional[str] = None,
         state_out: Optional[str] = None,
-        ignore_remote_version: Optional[bool] = None,
+        ignore_remoteversion: Optional[bool] = None,
         allow_missing: Optional[bool] = None,
         lock: Optional[bool] = None,
         lock_timeout: Optional[str] = None,

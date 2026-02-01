@@ -6,30 +6,29 @@ import shlex
 
 
 class Workspace:
-    __tf__: Terraform
-    __cmd__: str
+    _tf: Terraform
+    _cmd: str
 
-    def __init__(self, terraform_object: Terraform):
-        self.current = "default"
-        self.__cmd__ = "workspace"
-        self.__tf__ = terraform_object
+    def __init__(self, terraform_object: Terraform, workspace_name: str = "default"):
+        self._cmd = "workspace"
+        self.current = workspace_name
+        self._tf = terraform_object
 
     def list(
         self,
-        quiet: Optional[bool] = None,
-        color: Optional[bool] = None,
+        quiet: Optional[bool] = False,
+        color: Optional[bool] = True,
         chdir: Optional[str] = None,
-    ):
-        cmd = [self.__cmd__, "list"]
+    ) -> TerraformResult[bool, List[str]]:
+        cmd = [self._cmd, "list"]
         if not color:
-            color = self.__tf__.__color__
-        cmd.append(self.__tf__.__build_arg__("color", not color))
+            color = self._tf.color
+        cmd.append(self._tf._build_arg("color", not color))
 
-        result = self.__tf__.cmd(
+        result = self._tf.cmd(
             cmd, "Terraform workspace list", chdir=chdir, show_output=not quiet
         )
 
-        res = TerraformResult(result.success, "")
         if not result.success:
             if not quiet:
                 log.failed(
@@ -59,9 +58,10 @@ class Workspace:
         )
         log.set_env(self.current)
 
-        res.result = [
-            line.replace("*", "").strip() for line in result.stdout.splitlines()
-        ]
+        res = TerraformResult(
+            result.success,
+            [line.replace("*", "").strip() for line in result.stdout.splitlines()],
+        )
         res.result = list(filter(lambda x: len(x) > 0, res.result))
         return res
 
@@ -72,31 +72,31 @@ class Workspace:
         color: Optional[bool] = None,
         chdir: Optional[str] = None,
         quiet: Optional[bool] = False,
-    ):
-        cmd = [self.__cmd__, "select"]
+    ) -> TerraformResult:
+        cmd = [self._cmd, "select"]
 
         if not color:
-            color = self.__tf__.__color__
-        cmd.append(self.__tf__.__build_arg__("color", not color))
+            color = self._tf.color
+        cmd.append(self._tf._build_arg("color", not color))
         if or_create is True:
             if (
-                self.__tf__.__version__["version"]["major"] >= 1
-                and self.__tf__.__version__["version"]["minor"] >= 4
+                self._tf.version_dict["version"]["major"] >= 1
+                and self._tf.version_dict["version"]["minor"] >= 4
             ):
-                cmd.append(self.__tf__.__build_arg__("or_create", or_create))
+                cmd.append(self._tf._build_arg("or_create", or_create))
             else:
                 existing = self.list(True, color=color, chdir=chdir).result
                 if workspace not in existing:
                     if not quiet:
                         log.warn(
                             "The arg -or-create is available since version 1.4.x, and your version is",
-                            self.__tf__.__version__["version_str"],
+                            self._tf.version_dict["version_str"],
                             "Using alternate method",
                         )
                     return self.new(workspace, color=color, chdir=chdir)
         cmd.append(shlex.quote(workspace))
 
-        result = self.__tf__.cmd(
+        result = self._tf.cmd(
             cmd, "Terraform workspace select", chdir=chdir, show_output=not quiet
         )
 
@@ -118,7 +118,7 @@ class Workspace:
                 f"Terraform workspace select succeded in {result.duration}s",
                 end_sub=True,
             )
-        self.__tf__.__workspace__ = workspace
+        self._tf.workspace = workspace
         self.current = workspace
         log.set_env(workspace)
         return TerraformResult(result.success, workspace)
@@ -131,23 +131,23 @@ class Workspace:
         state: Optional[str] = None,
         color: Optional[bool] = None,
         chdir: Optional[str] = None,
-    ):
-        cmd = [self.__cmd__, "new"]
+    ) -> TerraformResult:
+        cmd = [self._cmd, "new"]
         if not lock:
-            lock = self.__tf__.__lock__
+            lock = self._tf.__lock__
         if not color:
-            color = self.__tf__.__color__
+            color = self._tf.color
         if not lock_timeout:
-            lock_timeout = self.__tf__.__lock_timeout__
+            lock_timeout = self._tf.__lock_timeout__
 
-        cmd.append(self.__tf__.__build_arg__("lock", lock))
-        cmd.append(self.__tf__.__build_arg__("color", not color))
-        cmd.append(self.__tf__.__build_arg__("lock_timeout", lock_timeout))
-        cmd.append(self.__tf__.__build_arg__("state", state))
+        cmd.append(self._tf._build_arg("lock", lock))
+        cmd.append(self._tf._build_arg("color", not color))
+        cmd.append(self._tf._build_arg("lock_timeout", lock_timeout))
+        cmd.append(self._tf._build_arg("state", state))
 
         cmd.append(shlex.quote(workspace))
 
-        result = self.__tf__.cmd(cmd, "Terraform workspace new", chdir=chdir)
+        result = self._tf.cmd(cmd, "Terraform workspace new", chdir=chdir)
 
         if not result.success:
             log.failed(
@@ -163,7 +163,7 @@ class Workspace:
         log.success(
             f"Terraform workspace new succeded in {result.duration}s", end_sub=True
         )
-        self.__tf__.__workspace__ = workspace
+        self._tf.workspace = workspace
         self.current = workspace
         log.set_env(workspace)
         return TerraformResult(result.success, workspace)

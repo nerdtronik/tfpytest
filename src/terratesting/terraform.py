@@ -10,7 +10,7 @@ from .classes import *  # noqa  # isort:skip
 
 os.environ["TF_IN_AUTOMATION"] = "1"
 # os.environ['TF_LOG'] = 'trace'
-log.set_env("Terraform")
+log.set_env("terratesting")
 log.show_file(False)
 log.set_level("info")
 
@@ -27,19 +27,19 @@ class Terraform:
         parallelism: Optional[int] = 10,
         color: Optional[bool] = True,
         var_file: Optional[str] = None,
+        plan_file: Optional[str] = "plan.tfplan",
     ):
-        self.__workspace__ = workspace
         self.chdir = chdir
-        self.__lock__ = lock
-        self.__lock_timeout__ = lock_timeout
-        self.__input__ = input
-        self.__paralellism__ = parallelism
-        self.__color__ = color
-        self.__var_file__ = var_file
-        self.__version__ = {}
-        self.__planfile__ = "plan.tfplan"
+        self.lock = lock
+        self.lock_timeout = lock_timeout
+        self.interactive = input
+        self.paralellism = parallelism
+        self.color = color
+        self.var_file = var_file
+        self.version_dict = {}
+        self.plan_file = plan_file
+        self.workspace = Workspace(self, workspace)
         self.state = State(self)
-        self.workspace = Workspace(self)
         log.set_env(self.workspace.current)
         self.version(quiet=True)
         if workspace != "default":
@@ -81,7 +81,7 @@ class Terraform:
             "latest": version["terraform_outdated"] == False,
             "platform": version["platform"],
         }
-        self.__version__ = res
+        self.version_dict = res
         if not quiet:
             log.success(
                 f"Terraform version retrieved successfully in {result.duration}s",
@@ -90,19 +90,19 @@ class Terraform:
         return TerraformResult(True, res)
 
     def enable_color(self, enable: bool = True):
-        self.__color__ = enable
+        self.color = enable
 
     def enable_lock(self, enable: bool = True):
-        self.__lock__ = enable
+        self.lock = enable
 
     def enable_input(self, enable: bool = False):
-        self.__input__ = enable
+        self.interactive = enable
 
     def enable_lock_timeout(self, timeout: str = "0s"):
-        self.__lock_timeout__ = timeout
+        self.lock_timeout = timeout
 
     @staticmethod
-    def __build_arg__(arg: str, value) -> str:
+    def _build_arg(arg: str, value) -> str:
         res = TERRAFORM_ARGS[arg]
         if res[-1] == "=" and value is not None:
             if isinstance(value, bool):
@@ -118,7 +118,7 @@ class Terraform:
             return ""
         return res
 
-    def __default_args__(
+    def _default_args(
         self,
         color: Optional[bool] = None,
         lock: Optional[bool] = None,
@@ -128,32 +128,32 @@ class Terraform:
         args = []
 
         if color is not None:
-            args.append(Terraform.__build_arg__("color", not color))
-        elif self.__color__ is False:
+            args.append(Terraform._build_arg("color", not color))
+        elif self.color is False:
             args.append(TERRAFORM_ARGS["color"])
         if lock is not None and lock is False:
-            args.append(Terraform.__build_arg__("lock", lock))
-        elif self.__lock__ is False:
-            args.append(Terraform.__build_arg__("lock", self.__lock__))
+            args.append(Terraform._build_arg("lock", lock))
+        elif self.lock is False:
+            args.append(Terraform._build_arg("lock", self.lock))
 
         if lock_timeout is not None and lock_timeout != "0s":
-            args.append(Terraform.__build_arg__("lock_timeout", lock_timeout))
-        elif self.__lock_timeout__ != "0s":
-            args.append(Terraform.__build_arg__("lock_timeout", self.__lock_timeout__))
+            args.append(Terraform._build_arg("lock_timeout", lock_timeout))
+        elif self.lock_timeout != "0s":
+            args.append(Terraform._build_arg("lock_timeout", self.lock_timeout))
 
         if input is not None:
-            args.append(Terraform.__build_arg__("input", input))
-        elif self.__input__ is False:
-            args.append(Terraform.__build_arg__("input", self.__input__))
+            args.append(Terraform._build_arg("input", input))
+        elif self.interactive is False:
+            args.append(Terraform._build_arg("input", self.interactive))
         return args
 
     def __global_args__(self, chdir: str = None):
         args = []
 
         if chdir is not None:
-            args.append(Terraform.__build_arg__("chdir", chdir))
+            args.append(Terraform._build_arg("chdir", chdir))
         elif self.chdir is not None and self.chdir != ".":
-            args.append(Terraform.__build_arg__("chdir", self.chdir))
+            args.append(Terraform._build_arg("chdir", self.chdir))
         return args
 
     @staticmethod
@@ -216,28 +216,28 @@ class Terraform:
     ):
         cmd = ["init"]
         if readonly:
-            cmd.append(Terraform.__build_arg__("readonly", readonly))
+            cmd.append(Terraform._build_arg("readonly", readonly))
 
         cmd.extend(
-            self.__default_args__(
+            self._default_args(
                 color=color, lock=lock, lock_timeout=lock_timeout, input=input
             )
         )
 
-        cmd.append(Terraform.__build_arg__("upgrade", upgrade))
-        cmd.append(Terraform.__build_arg__("reconfigure", reconfigure))
-        cmd.append(Terraform.__build_arg__("migrate_state", migrate_state))
-        cmd.append(Terraform.__build_arg__("force_copy", force_copy))
-        cmd.append(Terraform.__build_arg__("backend_config", backend_config))
-        cmd.append(Terraform.__build_arg__("plugin_dir", plugin_dir))
-        # cmd.append(Terraform.__build_arg__("lockfile", lockfile))
+        cmd.append(Terraform._build_arg("upgrade", upgrade))
+        cmd.append(Terraform._build_arg("reconfigure", reconfigure))
+        cmd.append(Terraform._build_arg("migrate_state", migrate_state))
+        cmd.append(Terraform._build_arg("force_copy", force_copy))
+        cmd.append(Terraform._build_arg("backend_config", backend_config))
+        cmd.append(Terraform._build_arg("plugin_dir", plugin_dir))
+        # cmd.append(Terraform._build_arg("lockfile", lockfile))
 
         if not backend:
-            cmd.append(Terraform.__build_arg__("backend", backend))
+            cmd.append(Terraform._build_arg("backend", backend))
         if not get:
-            cmd.append(Terraform.__build_arg__("get", get))
+            cmd.append(Terraform._build_arg("get", get))
         if not get_plugins:
-            cmd.append(Terraform.__build_arg__("get_plugins", get_plugins))
+            cmd.append(Terraform._build_arg("get_plugins", get_plugins))
 
         result = self.cmd(cmd, title="Terraform init", chdir=chdir)
         if not result.success:
@@ -254,19 +254,19 @@ class Terraform:
         log.success(
             f"Terraform init completed in: {result.duration} seconds", end_sub=True
         )
-        log.info(self.workspace.current, self.__workspace__)
-        if self.workspace.current != self.__workspace__:
+        log.info(self.workspace.current, self.workspace)
+        if self.workspace.current != self.workspace:
             self.workspace.list(True)
-            if self.workspace.current != self.__workspace__:
-                self.__workspace__ = self.workspace.select(
-                    self.__workspace__, or_create=True
+            if self.workspace.current != self.workspace:
+                self.workspace = self.workspace.select(
+                    self.workspace, or_create=True
                 ).result
         return TerraformResult(True, result.stdout)
 
     def get(self, update: bool = None, color: bool = None):
         cmd = ["get"]
-        cmd.append(Terraform.__build_arg__("update", update))
-        cmd.append(Terraform.__build_arg__("color", not color))
+        cmd.append(Terraform._build_arg("update", update))
+        cmd.append(Terraform._build_arg("color", not color))
 
         result = self.cmd(cmd, title="Terraform get", chdir=self.chdir)
         if not result.success:
@@ -327,43 +327,43 @@ class Terraform:
     ):
         cmd = ["plan"]
         cmd.extend(
-            self.__default_args__(
+            self._default_args(
                 color=color, lock=lock, lock_timeout=lock_timeout, input=input
             )
         )
         if not out:
-            out = self.__planfile__
-        cmd.append(Terraform.__build_arg__("out", out))
+            out = self.plan_file
+        cmd.append(Terraform._build_arg("out", out))
 
         if (
-            self.__version__["version"]["major"] >= 1
-            and self.__version__["version"]["minor"] >= 0
+            self.version_dict["version"]["major"] >= 1
+            and self.version_dict["version"]["minor"] >= 0
         ):
-            cmd.append(Terraform.__build_arg__("refresh_only", refresh_only))
+            cmd.append(Terraform._build_arg("refresh_only", refresh_only))
         else:
             log.warn(
-                f"the option '-refresh-only' is supported since the version 1.1.0, and your version is {self.__version__['version_str']}"
+                f"the option '-refresh-only' is supported since the version 1.1.0, and your version is {self.version_dict['version_str']}"
             )
         if (
-            self.__version__["version"]["major"] >= 1
-            and self.__version__["version"]["minor"] >= 0
+            self.version_dict["version"]["major"] >= 1
+            and self.version_dict["version"]["minor"] >= 0
         ):
-            cmd.append(Terraform.__build_arg__("json", json))
+            cmd.append(Terraform._build_arg("json", json))
         else:
             log.warn(
-                f"the option '-json' is supported since the version 1.0.0, and your version is {self.__version__['version_str']}"
+                f"the option '-json' is supported since the version 1.0.0, and your version is {self.version_dict['version_str']}"
             )
         if not parallelism:
-            parallelism = self.__paralellism__
-        cmd.append(Terraform.__build_arg__("parallelism", parallelism))
+            parallelism = self.paralellism
+        cmd.append(Terraform._build_arg("parallelism", parallelism))
 
-        cmd.append(Terraform.__build_arg__("destroy", destroy))
-        cmd.append(Terraform.__build_arg__("refresh", refresh))
-        cmd.append(Terraform.__build_arg__("replace", replace))
-        cmd.append(Terraform.__build_arg__("target", target))
-        cmd.append(Terraform.__build_arg__("var_file", var_file))
-        cmd.append(Terraform.__build_arg__("state", state))
-        cmd.append(Terraform.__build_arg__("compact_warnings", compact_warnings))
+        cmd.append(Terraform._build_arg("destroy", destroy))
+        cmd.append(Terraform._build_arg("refresh", refresh))
+        cmd.append(Terraform._build_arg("replace", replace))
+        cmd.append(Terraform._build_arg("target", target))
+        cmd.append(Terraform._build_arg("var_file", var_file))
+        cmd.append(Terraform._build_arg("state", state))
+        cmd.append(Terraform._build_arg("compact_warnings", compact_warnings))
 
         cmd.extend(Terraform.__parse_vars__(vars))
 
@@ -437,7 +437,7 @@ class Terraform:
     ):
         cmd = ["apply"]
         cmd.extend(
-            self.__default_args__(
+            self._default_args(
                 color=color, lock=lock, lock_timeout=lock_timeout, input=input
             )
         )
@@ -445,40 +445,40 @@ class Terraform:
         callback = None
         line_callback = None
 
-        if self.__version__["version"]["major"] >= 1:
-            cmd.append(Terraform.__build_arg__("json", json))
+        if self.version_dict["version"]["major"] >= 1:
+            cmd.append(Terraform._build_arg("json", json))
             if json:
                 line_callback = Terraform.__apply_line_callback__
                 callback = Terraform.__apply_callback__
 
         if not parallelism:
-            cmd.append(Terraform.__build_arg__("parallelism", self.__paralellism__))
+            cmd.append(Terraform._build_arg("parallelism", self.paralellism))
         else:
-            cmd.append(Terraform.__build_arg__("parallelism", parallelism))
-        cmd.append(Terraform.__build_arg__("auto_approve", auto_approve))
-        cmd.append(Terraform.__build_arg__("compact_warnings", compact_warnings))
+            cmd.append(Terraform._build_arg("parallelism", parallelism))
+        cmd.append(Terraform._build_arg("auto_approve", auto_approve))
+        cmd.append(Terraform._build_arg("compact_warnings", compact_warnings))
 
-        cmd.append(Terraform.__build_arg__("state", state))
-        cmd.append(Terraform.__build_arg__("state_out", state_out))
-        cmd.append(Terraform.__build_arg__("backup", backup))
-        cmd.append(Terraform.__build_arg__("var_file", var_file))
+        cmd.append(Terraform._build_arg("state", state))
+        cmd.append(Terraform._build_arg("state_out", state_out))
+        cmd.append(Terraform._build_arg("backup", backup))
+        cmd.append(Terraform._build_arg("var_file", var_file))
         cmd.extend(Terraform.__parse_vars__(vars))
 
-        cmd.append(Terraform.__build_arg__("destroy", destroy))
-        cmd.append(Terraform.__build_arg__("refresh", refresh))
-        cmd.append(Terraform.__build_arg__("replace", replace))
-        cmd.append(Terraform.__build_arg__("target", target))
+        cmd.append(Terraform._build_arg("destroy", destroy))
+        cmd.append(Terraform._build_arg("refresh", refresh))
+        cmd.append(Terraform._build_arg("replace", replace))
+        cmd.append(Terraform._build_arg("target", target))
         if (
-            self.__version__["version"]["major"] >= 1
-            and self.__version__["version"]["minor"] >= 0
+            self.version_dict["version"]["major"] >= 1
+            and self.version_dict["version"]["minor"] >= 0
         ):
-            cmd.append(Terraform.__build_arg__("refresh_only", refresh_only))
+            cmd.append(Terraform._build_arg("refresh_only", refresh_only))
         else:
             log.warn(
-                f"the option '-refresh-only' is supported since the version 1.1.0, and your version is {self.__version__['version_str']}"
+                f"the option '-refresh-only' is supported since the version 1.1.0, and your version is {self.version_dict['version_str']}"
             )
         if not plan_file:
-            cmd.append(shlex.quote(self.__planfile__))
+            cmd.append(shlex.quote(self.plan_file))
         else:
             cmd.append(shlex.quote(plan_file))
         result = self.cmd(
@@ -487,7 +487,7 @@ class Terraform:
             chdir=chdir,
             line_callback=line_callback,
             callback=callback,
-            show_output=not (json and self.__version__["version"]["major"] >= 1),
+            show_output=not (json and self.version_dict["version"]["major"] >= 1),
         )
         res = TerraformResult(True, result.stdout)
         if not result.success:
@@ -504,7 +504,7 @@ class Terraform:
         log.success(
             f"Terraform apply completed in: {result.duration} seconds", end_sub=True
         )
-        if json and self.__version__["version"]["major"] >= 1:
+        if json and self.version_dict["version"]["major"] >= 1:
             res.result = dict(stdout=result.stdout, output=result.callback_output)
         return res
 
@@ -524,19 +524,19 @@ class Terraform:
         cmd = ["destroy"]
 
         cmd.extend(
-            self.__default_args__(
+            self._default_args(
                 color=color, lock=lock, lock_timeout=lock_timeout, input=input
             )
         )
 
         if not parallelism:
-            cmd.append(Terraform.__build_arg__("parallelism", self.__paralellism__))
+            cmd.append(Terraform._build_arg("parallelism", self.paralellism))
         else:
-            cmd.append(Terraform.__build_arg__("parallelism", parallelism))
+            cmd.append(Terraform._build_arg("parallelism", parallelism))
 
-        cmd.append(Terraform.__build_arg__("auto_approve", auto_approve))
-        cmd.append(Terraform.__build_arg__("target", target))
-        cmd.append(Terraform.__build_arg__("var_file", var_file))
+        cmd.append(Terraform._build_arg("auto_approve", auto_approve))
+        cmd.append(Terraform._build_arg("target", target))
+        cmd.append(Terraform._build_arg("var_file", var_file))
 
         cmd.extend(self.__parse_vars__(vars))
 
@@ -563,15 +563,15 @@ class Terraform:
     def show(self, file: str = None, json=True, color: bool = None, chdir: str = None):
         cmd = ["show"]
         # log.info("Running Terraform show")
-        cmd.append(Terraform.__build_arg__("json", json))
+        cmd.append(Terraform._build_arg("json", json))
 
         if color is not None:
-            cmd.append(Terraform.__build_arg__("color", not color))
+            cmd.append(Terraform._build_arg("color", not color))
         else:
-            cmd.append(Terraform.__build_arg__("color", not self.__color__))
+            cmd.append(Terraform._build_arg("color", not self.color))
 
         if not file:
-            cmd.append(shlex.quote(self.__planfile__))
+            cmd.append(shlex.quote(self.plan_file))
         else:
             cmd.append(shlex.quote(file))
 
@@ -654,13 +654,13 @@ class Terraform:
         recursive: bool = False,
     ):
         cmd = ["fmt"]
-        cmd.append(Terraform.__build_arg__("diff", diff))
-        cmd.append(Terraform.__build_arg__("check", check))
-        cmd.append(Terraform.__build_arg__("recursive", recursive))
+        cmd.append(Terraform._build_arg("diff", diff))
+        cmd.append(Terraform._build_arg("check", check))
+        cmd.append(Terraform._build_arg("recursive", recursive))
         if list_files is False:
-            cmd.append(Terraform.__build_arg__("list", list_files))
+            cmd.append(Terraform._build_arg("list", list_files))
         if write is False:
-            cmd.append(Terraform.__build_arg__("write", write))
+            cmd.append(Terraform._build_arg("write", write))
 
         result = Terraform.cmd(cmd, "Terraform fmt", chdir=chdir)
         res = TerraformResult(True, result.stdout)
@@ -687,13 +687,13 @@ class Terraform:
     ):
         cmd = ["fmt"]
 
-        cmd.append(Terraform.__build_arg__("diff", diff))
-        cmd.append(Terraform.__build_arg__("check", check))
-        cmd.append(Terraform.__build_arg__("recursive", recursive))
+        cmd.append(Terraform._build_arg("diff", diff))
+        cmd.append(Terraform._build_arg("check", check))
+        cmd.append(Terraform._build_arg("recursive", recursive))
         if list_files is False:
-            cmd.append(Terraform.__build_arg__("list", list_files))
+            cmd.append(Terraform._build_arg("list", list_files))
         if write is False:
-            cmd.append(Terraform.__build_arg__("write", write))
+            cmd.append(Terraform._build_arg("write", write))
         result = self.cmd(cmd, "Terraform fmt", chdir)
         res = TerraformResult(True, result.stdout)
         if not result.success:
@@ -717,9 +717,9 @@ class Terraform:
         cmd = ["validate"]
 
         if color is False:
-            color = self.__color__
-        cmd.append(Terraform.__build_arg__("color", not color))
-        cmd.append(Terraform.__build_arg__("json", json))
+            color = self.color
+        cmd.append(Terraform._build_arg("color", not color))
+        cmd.append(Terraform._build_arg("json", json))
         result = self.cmd(cmd, "Terraform validate", chdir)
         res = TerraformResult(True, result.stdout)
         if not result.success:
@@ -747,11 +747,11 @@ class Terraform:
         if json:
             log.info("Terraform output started", start_sub=True)
         if not color:
-            color = self.__color__
-        cmd.append(Terraform.__build_arg__("color", not color))
-        cmd.append(Terraform.__build_arg__("json", json))
-        cmd.append(Terraform.__build_arg__("raw", raw))
-        cmd.append(Terraform.__build_arg__("state", state))
+            color = self.color
+        cmd.append(Terraform._build_arg("color", not color))
+        cmd.append(Terraform._build_arg("json", json))
+        cmd.append(Terraform._build_arg("raw", raw))
+        cmd.append(Terraform._build_arg("state", state))
         if output_name:
             cmd.append(shlex.quote(output_name))
         result = self.cmd(cmd, "Terraform output", chdir, show_output=not json)
@@ -786,10 +786,10 @@ class Terraform:
                     f"The type:{type} is not available, please choose one of: {', '.join(TERRAFORM_GRAPH_TYPES)}",
                     "graph",
                 )
-            cmd.append(Terraform.__build_arg__("type", type))
-        cmd.append(Terraform.__build_arg__("plan", plan))
-        cmd.append(Terraform.__build_arg__("draw_cycles", draw_cycles))
-        cmd.append(Terraform.__build_arg__("module_depth", module_depth))
+            cmd.append(Terraform._build_arg("type", type))
+        cmd.append(Terraform._build_arg("plan", plan))
+        cmd.append(Terraform._build_arg("draw_cycles", draw_cycles))
+        cmd.append(Terraform._build_arg("module_depth", module_depth))
 
         result = self.cmd(cmd, "Terraform graph", chdir)
         res = TerraformResult(True, result.stdout)
@@ -825,18 +825,18 @@ class Terraform:
     ):
         cmd = ["import"]
         cmd.extend(
-            self.__default_args__(
+            self._default_args(
                 color=color, lock=lock, lock_timeout=lock_timeout, input=input
             )
         )
 
-        cmd.append(Terraform.__build_arg__("config", config))
-        cmd.append(Terraform.__build_arg__("paralellism", parallelism))
-        cmd.append(Terraform.__build_arg__("provider", provider))
-        cmd.append(Terraform.__build_arg__("var_file", var_file))
-        cmd.append(Terraform.__build_arg__("state", state))
-        cmd.append(Terraform.__build_arg__("state_out", state_out))
-        cmd.append(Terraform.__build_arg__("backup", backup))
+        cmd.append(Terraform._build_arg("config", config))
+        cmd.append(Terraform._build_arg("paralellism", parallelism))
+        cmd.append(Terraform._build_arg("provider", provider))
+        cmd.append(Terraform._build_arg("var_file", var_file))
+        cmd.append(Terraform._build_arg("state", state))
+        cmd.append(Terraform._build_arg("state_out", state_out))
+        cmd.append(Terraform._build_arg("backup", backup))
         cmd.extend(Terraform.__parse_vars__(vars))
 
         cmd.append(shlex.quote(address))
@@ -874,21 +874,21 @@ class Terraform:
     ):
         cmd = ["refresh"]
         cmd.extend(
-            self.__default_args__(
+            self._default_args(
                 color=color, lock=lock, lock_timeout=lock_timeout, input=input
             )
         )
         if not parallelism:
-            cmd.append(Terraform.__build_arg__("parallelism", self.__paralellism__))
+            cmd.append(Terraform._build_arg("parallelism", self.paralellism))
         else:
-            cmd.append(Terraform.__build_arg__("parallelism", parallelism))
-        cmd.append(Terraform.__build_arg__("target", target))
-        cmd.append(Terraform.__build_arg__("compact_warnings", compact_warnings))
+            cmd.append(Terraform._build_arg("parallelism", parallelism))
+        cmd.append(Terraform._build_arg("target", target))
+        cmd.append(Terraform._build_arg("compact_warnings", compact_warnings))
 
-        cmd.append(Terraform.__build_arg__("state", state))
-        cmd.append(Terraform.__build_arg__("state_out", state_out))
-        cmd.append(Terraform.__build_arg__("backup", backup))
-        cmd.append(Terraform.__build_arg__("var_file", var_file))
+        cmd.append(Terraform._build_arg("state", state))
+        cmd.append(Terraform._build_arg("state_out", state_out))
+        cmd.append(Terraform._build_arg("backup", backup))
+        cmd.append(Terraform._build_arg("var_file", var_file))
         cmd.extend(Terraform.__parse_vars__(vars))
 
         result = self.cmd(cmd, "Terraform refresh", chdir)
@@ -922,9 +922,9 @@ class Terraform:
         backup: Optional[str] = None,
         chdir: Optional[str] = None,
     ):
-        if self.__version__["version"]["major"] == 0 or (
-            self.__version__["version"]["major"] >= 1
-            and self.__version__["version"]["minor"] < 1
+        if self.version_dict["version"]["major"] == 0 or (
+            self.version_dict["version"]["major"] >= 1
+            and self.version_dict["version"]["minor"] < 1
         ):
             return self.__legacy_refresh__(
                 target=target,
@@ -978,22 +978,22 @@ class Terraform:
     ):
         cmd = ["taint"]
         if not lock:
-            lock = self.__lock__
+            lock = self.lock
         if not lock_timeout:
-            lock_timeout = self.__lock_timeout__
+            lock_timeout = self.lock_timeout
 
         if lock is False:
-            cmd.append(Terraform.__build_arg__("lock", lock))
+            cmd.append(Terraform._build_arg("lock", lock))
         if lock_timeout != "0s":
-            cmd.append(Terraform.__build_arg__("lock_timeout", lock_timeout))
+            cmd.append(Terraform._build_arg("lock_timeout", lock_timeout))
 
         cmd.append(
-            Terraform.__build_arg__("ignore_remote_version", ignore_remote_version)
+            Terraform._build_arg("ignore_remote_version", ignore_remote_version)
         )
-        cmd.append(Terraform.__build_arg__("backup", backup))
-        cmd.append(Terraform.__build_arg__("state", state))
-        cmd.append(Terraform.__build_arg__("state_out", state_out))
-        cmd.append(Terraform.__build_arg__("allow_missing", allow_missing))
+        cmd.append(Terraform._build_arg("backup", backup))
+        cmd.append(Terraform._build_arg("state", state))
+        cmd.append(Terraform._build_arg("state_out", state_out))
+        cmd.append(Terraform._build_arg("allow_missing", allow_missing))
         cmd.append(shlex.quote(address))
 
         result = self.cmd(cmd, "Terraform taint", chdir)
@@ -1025,12 +1025,12 @@ class Terraform:
         chdir: Optional[str] = None,
     ):
         if (
-            self.__version__["version"]["major"] == 0
-            and self.__version__["version"]["minor"] <= 15
+            self.version_dict["version"]["major"] == 0
+            and self.version_dict["version"]["minor"] <= 15
         ):
             if (
-                self.__version__["version"]["minor"] == 15
-                and self.__version__["version"]["patch"] > 2
+                self.version_dict["version"]["minor"] == 15
+                and self.version_dict["version"]["patch"] > 2
             ):
                 log.warn(
                     f"Command 'terraform taint' is deprecated since 0.15.2, using 'terraform apply -replace=<address>' instead"
@@ -1088,22 +1088,22 @@ class Terraform:
     ):
         cmd = ["untaint"]
         if not lock:
-            lock = self.__lock__
+            lock = self.lock
         if not lock_timeout:
-            lock_timeout = self.__lock_timeout__
+            lock_timeout = self.lock_timeout
 
         if lock is False:
-            cmd.append(Terraform.__build_arg__("lock", lock))
+            cmd.append(Terraform._build_arg("lock", lock))
         if lock_timeout != "0s":
-            cmd.append(Terraform.__build_arg__("lock_timeout", lock_timeout))
+            cmd.append(Terraform._build_arg("lock_timeout", lock_timeout))
 
         cmd.append(
-            Terraform.__build_arg__("ignore_remote_version", ignore_remote_version)
+            Terraform._build_arg("ignore_remote_version", ignore_remote_version)
         )
-        cmd.append(Terraform.__build_arg__("backup", backup))
-        cmd.append(Terraform.__build_arg__("state", state))
-        cmd.append(Terraform.__build_arg__("state_out", state_out))
-        cmd.append(Terraform.__build_arg__("allow_missing", allow_missing))
+        cmd.append(Terraform._build_arg("backup", backup))
+        cmd.append(Terraform._build_arg("state", state))
+        cmd.append(Terraform._build_arg("state_out", state_out))
+        cmd.append(Terraform._build_arg("allow_missing", allow_missing))
         cmd.append(shlex.quote(address))
 
         result = self.cmd(cmd, "Terraform untaint", chdir)
@@ -1124,7 +1124,7 @@ class Terraform:
         self, lock_id: str, force: Optional[bool] = False, chdir: Optional[str] = None
     ):
         cmd = ["force-ublock"]
-        cmd.append(Terraform.__build_arg__("force", force))
+        cmd.append(Terraform._build_arg("force", force))
 
         if not chdir:
             chdir = self.chdir

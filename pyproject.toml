@@ -3,11 +3,11 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "terraform-python"
+name = "terratesting"
 dynamic = ["version"]
 dependencies = []
 authors = [{ name = "nerdtronik", email = "nerdtronikpay@gmail.com" }]
-description = "A Terraform python wrapper"
+description = "A Terraform testing framework for CI/CD pipelines"
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
@@ -27,10 +27,10 @@ classifiers = [
   "Topic :: Terminals",
   "Topic :: Utilities",
 ]
-keywords=["terraform","ci/cd","cicd","ci-cd","terraform-py","terraform-python"]
+keywords=["terraform","ci/cd","cicd","ci-cd","terraform-py","terratesting","opentofu","infrastructure-as-code","iac"]
 
 [project.urls]
-Repository = "https://github.com/nerdtronik/terraform-python"
+Repository = "https://github.com/nerdtronik/terratesting"
 
 # [tool.setuptools]
 # packages = ["terraform_py", "terraform_py.utils", "terraform_py.classes"]
@@ -47,4 +47,4 @@ exclude = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/terraform_python"]
+packages = ["src/terratesting"]
